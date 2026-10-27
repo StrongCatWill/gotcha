@@ -8,23 +8,23 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Gotcha" />
-<meta name="theme-color" content="#6b4eff" />
+<meta name="theme-color" content="#78A1BF" />
 <title>Gotcha — job swiping for UCD students</title>
 <style>
   :root{
-    --bg:#eef0fb; --ink:#141327; --muted:#6b6a86;
-    --brand:#6b4eff; --brand2:#9b7bff; --like:#1fbf75; --nope:#ff5a6a;
-    --card:#ffffff; --line:#e7e6f5;
+    --bg:#eef2f7; --ink:#223445; --muted:#6b7f90;
+    --brand:#78A1BF; --brand2:#4F7691; --like:#2b9e7a; --nope:#e8697b;
+    --card:#ffffff; --line:#dbe4ec; --frame:#2a3c4a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:#d9dcf0;color:var(--ink);display:flex;align-items:center;justify-content:center;
+    background:#cdd9e4;color:var(--ink);display:flex;align-items:center;justify-content:center;
     min-height:100vh;min-height:100dvh}
   /* locked to an iPhone-sized frame */
   .phone{width:min(100vw,390px);height:min(100dvh,844px);background:#f6f6fc;position:relative;
     display:flex;flex-direction:column;overflow:hidden}
   @media (min-width:431px){            /* desktop: show a phone frame */
-    .phone{border-radius:44px;box-shadow:0 30px 70px rgba(40,30,110,.28);border:10px solid #141327}
+    .phone{border-radius:44px;box-shadow:0 30px 70px rgba(42,60,74,.32);border:10px solid var(--frame)}
   }
   header{padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between}
   .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px}
@@ -38,7 +38,7 @@
   .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
   .stage{flex:1;position:relative;margin:0 14px}
   .card{position:absolute;inset:0;background:var(--card);border-radius:24px;overflow:hidden;
-    box-shadow:0 18px 40px rgba(60,40,140,.16);display:flex;flex-direction:column;
+    box-shadow:0 18px 40px rgba(42,60,74,.16);display:flex;flex-direction:column;
     transition:transform .35s ease,opacity .35s ease;will-change:transform}
   .banner{height:140px;background:linear-gradient(135deg,var(--brand),var(--brand2));position:relative;
     padding:16px;color:#fff;display:flex;flex-direction:column;justify-content:space-between}
@@ -52,7 +52,7 @@
   .co h2{margin:0;font-size:19px}
   .co p{margin:2px 0 0;font-size:13px;color:var(--muted)}
   .tags{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
-  .tag{background:#f0eefc;color:var(--brand);font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px}
+  .tag{background:#e4edf3;color:var(--brand2);font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px}
   .meta{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;font-size:13px;color:var(--muted)}
   .meta b{color:var(--ink)}
   .prompt{background:#f7f7fc;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px}
@@ -64,16 +64,16 @@
   .stamp.nope{right:20px;color:var(--nope);border-color:var(--nope)}
   .actions{display:flex;justify-content:center;gap:22px;padding:16px 0 22px}
   .btn{width:60px;height:60px;border-radius:50%;border:none;background:#fff;font-size:24px;cursor:pointer;
-    box-shadow:0 10px 24px rgba(60,40,140,.18);display:grid;place-items:center;transition:transform .1s}
+    box-shadow:0 10px 24px rgba(42,60,74,.18);display:grid;place-items:center;transition:transform .1s}
   .btn:active{transform:scale(.9)}
   .btn.nope{color:var(--nope)} .btn.like{color:var(--like)} .btn.save{color:var(--brand);font-size:20px}
   .empty{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;color:var(--muted);padding:30px}
   /* hidden reel overlay */
   .reel{position:fixed;inset:0;background:rgba(10,8,30,.55);display:none;align-items:center;justify-content:center;z-index:30}
-  .reel .sheet{width:100%;max-width:400px;background:#120f29;color:#fff;border-radius:26px;overflow:hidden;
+  .reel .sheet{width:100%;max-width:400px;background:#14222d;color:#fff;border-radius:26px;overflow:hidden;
     box-shadow:0 30px 60px rgba(0,0,0,.4)}
-  .reel .vid{aspect-ratio:9/13;background:linear-gradient(160deg,#2a1f6b,#6b4eff);position:relative;
+  .reel .vid{aspect-ratio:9/13;background:linear-gradient(160deg,#2f4a5e,#78A1BF);position:relative;
     display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
   .reel .play{position:absolute;inset:0;display:grid;place-items:center;font-size:54px;color:rgba(255,255,255,.9)}
   .reel .pill{position:absolute;top:16px;left:16px;background:rgba(255,255,255,.2);padding:5px 12px;
@@ -85,7 +85,7 @@
   @keyframes grow{to{width:100%}}
   .reel .foot{padding:16px 20px;display:flex;gap:10px}
   .reel .foot button{flex:1;border:none;border-radius:14px;padding:13px;font-weight:700;font-size:14px;cursor:pointer}
-  .reel .skip{background:#2a2748;color:#fff} .reel .go{background:var(--brand);color:#fff}
+  .reel .skip{background:#26343f;color:#fff} .reel .go{background:var(--brand);color:#fff}
   /* match badge */
   .match{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.22);color:#fff;
     padding:5px 11px;border-radius:999px;font-size:12px;font-weight:800;display:flex;gap:5px;align-items:center}
@@ -108,8 +108,8 @@
   .onb .opt.on{background:var(--brand);color:#fff;border-color:var(--brand)}
   .onb .cta{padding:16px 24px 26px}
   .onb .cta button{width:100%;border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:800;
-    color:#fff;background:var(--brand);cursor:pointer;box-shadow:0 12px 26px rgba(107,78,255,.35)}
-  .onb .cta button:disabled{background:#c6bff0;box-shadow:none;cursor:not-allowed}
+    color:#fff;background:var(--brand);cursor:pointer;box-shadow:0 12px 26px rgba(79,118,145,.4)}
+  .onb .cta button:disabled{background:#b6c8d6;box-shadow:none;cursor:not-allowed}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
     background:#141327;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;transition:.3s;z-index:40}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
