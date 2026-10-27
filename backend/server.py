@@ -66,7 +66,10 @@ class Handler(BaseHTTPRequestHandler):
         fp = os.path.normpath(os.path.join(ROOT, rel))
         if not fp.startswith(ROOT) or not os.path.isfile(fp):
             return self._json({"error": "not found"}, 404)
-        ctype = "text/html" if fp.endswith(".html") else "application/octet-stream"
+        ext = os.path.splitext(fp)[1].lower()
+        ctype = {".html": "text/html", ".png": "image/png", ".jpg": "image/jpeg",
+                 ".jpeg": "image/jpeg", ".svg": "image/svg+xml", ".css": "text/css",
+                 ".js": "application/javascript", ".webp": "image/webp"}.get(ext, "application/octet-stream")
         with open(fp, "rb") as f:
             body = f.read()
         self.send_response(200)

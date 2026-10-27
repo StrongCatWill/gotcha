@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Gotcha" />
+<meta name="apple-mobile-web-app-title" content="Gotya!" />
 <meta name="theme-color" content="#78A1BF" />
-<title>Gotcha — job swiping for UCD students</title>
+<title>Gotya! — job swiping for UCD students</title>
 <style>
   :root{
     --bg:#eef2f7; --ink:#223445; --muted:#6b7f90;
@@ -62,6 +62,20 @@
   .need .q{font-size:12px;color:var(--brand2);font-weight:700;margin-bottom:6px}
   .need ul{margin:0;padding-left:18px}
   .need li{font-size:13.5px;line-height:1.7;color:var(--ink)}
+  /* native-ad skill card */
+  .ad{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    padding:28px;color:#fff;background:linear-gradient(160deg,#2f4a5e,#78A1BF)}
+  .ad.soft{background:linear-gradient(160deg,#3a5a52,#7bbfa6)}
+  .adlabel{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;
+    letter-spacing:.4px;opacity:.85}
+  .adicon{font-size:56px;margin-bottom:8px}
+  .adkind{background:rgba(255,255,255,.22);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700}
+  .adskill{margin:12px 0 6px;font-size:34px}
+  .adblurb{margin:0 10px 22px;font-size:15px;line-height:1.5;opacity:.95}
+  .adcta{border:none;background:#fff;color:var(--brand2);font-weight:800;font-size:15px;
+    padding:13px 24px;border-radius:14px;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.18)}
+  .ad.soft .adcta{color:#2f6b57}
+  .adswipe{margin-top:16px;font-size:12px;opacity:.8}
   .stamp{position:absolute;top:26px;font-size:30px;font-weight:900;padding:6px 16px;border:4px solid;
     border-radius:12px;opacity:0;transform:rotate(-14deg);pointer-events:none}
   .stamp.like{left:20px;color:var(--like);border-color:var(--like)}
@@ -142,6 +156,20 @@
   .help{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:50%;border:none;
     background:#fff;color:var(--brand);font-size:16px;font-weight:800;cursor:pointer;z-index:20;
     box-shadow:0 6px 16px rgba(42,60,74,.18)}
+  .logomark{height:30px;width:auto;display:block}
+  /* splash intro */
+  .splash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(100vw,390px);height:min(100dvh,844px);background:#fff;z-index:60;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;
+    padding:34px;text-align:center;overflow:hidden}
+  @media (min-width:431px){ .splash{border-radius:44px} }
+  .splash img{width:80%;max-width:300px;animation:pop .6s cubic-bezier(.2,1.3,.4,1) both}
+  @keyframes pop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+  .splash .tag{font-size:17px;color:var(--muted);line-height:1.5;max-width:280px;
+    animation:pop .6s .15s both}
+  .splash button{border:none;background:var(--brand);color:#fff;font-weight:800;font-size:16px;
+    padding:15px 42px;border-radius:16px;box-shadow:0 12px 26px rgba(79,118,145,.4);cursor:pointer;
+    animation:pop .6s .3s both}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
     background:#141327;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;transition:.3s;z-index:40}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -151,7 +179,7 @@
 <div class="phone">
   <button class="help" onclick="startTour()" title="How it works">?</button>
   <header>
-    <div class="logo"><span class="mark">G</span> Gotcha</div>
+    <div class="logo"><img src="assets/logo.png" alt="Gotya!" class="logomark" /></div>
     <div class="count" id="count"></div>
   </header>
 
@@ -172,12 +200,19 @@
   </div>
 </div>
 
+<!-- Splash intro -->
+<div class="splash" id="splash">
+  <img src="assets/logo.png" alt="Gotya!" />
+  <div class="tag">Swipe your way to the right job.<br />Jobs that fit <b>you</b> — not the other way round.</div>
+  <button onclick="document.getElementById('splash').style.display='none'">Get started →</button>
+</div>
+
 <!-- Onboarding: set criteria + interests -->
 <div class="onb" id="onb">
   <div class="top">
     <div class="step">Step 1 of 1 · Set you up</div>
     <h2>What are you into?</h2>
-    <p>Gotcha pulls only the roles that match. Pick a few — you can change these later.</p>
+    <p>Gotya pulls only the roles that match. Pick a few — you can change these later.</p>
   </div>
   <div class="scroll">
     <div class="group">
@@ -353,9 +388,25 @@ async function loadJobs(){
     const q=new URLSearchParams({skills:userSkills.join(","),types:userTypes.join(","),vibes:userVibes.join(",")});
     const r=await fetch(`/api/jobs?${q}`);
     const d=await r.json();
-    if(d.jobs && d.jobs.length){ FEED=d.jobs; return; }
+    if(d.jobs && d.jobs.length){ FEED=withAds(d.jobs); return; }
   }catch(e){ /* offline / file:// — use embedded sample */ }
-  FEED=JOBS;
+  FEED=withAds(JOBS);
+}
+
+// Native-ad skill cards slipped between jobs (every 3rd slot).
+const SKILL_ADS=[
+  {skill:"SQL",          kind:"Hard", icon:"🗄️", blurb:"Query data like a pro — the #1 ask in grad data roles."},
+  {skill:"Communication",kind:"Soft", icon:"🗣️", blurb:"Explain your work clearly — recruiters rank it top 3."},
+  {skill:"React",        kind:"Hard", icon:"⚛️", blurb:"Build interfaces fast — all over your frontend matches."},
+  {skill:"Teamwork",     kind:"Soft", icon:"🤝", blurb:"Ship together — nearly every employer card mentions it."},
+  {skill:"Python",       kind:"Hard", icon:"🐍", blurb:"Automate & analyse — opens data and research roles."},
+];
+function withAds(jobs){
+  const out=[]; let a=0;
+  jobs.forEach((j,i)=>{ out.push(j);
+    if((i+1)%3===0){ out.push({_ad:true, ...SKILL_ADS[a%SKILL_ADS.length]}); a++; }
+  });
+  return out;
 }
 
 // --- match score: use backend value if present, else compute locally ---
@@ -374,6 +425,7 @@ function renderFilters(){
     b.textContent=x;b.onclick=()=>{active=x;idx=0;render()};f.appendChild(b)});
 }
 function card(j){
+  if(j._ad) return adCard(j);
   return `<div class="banner"><span class="src">${j.src}</span>
       <span class="match">🎯 <b>${matchPct(j)}%</b> match</span>
       <div><div style="font-size:12px;opacity:.85">${j.type}</div><div class="pay">${j.pay}</div></div></div>
@@ -387,6 +439,18 @@ function card(j){
       <div class="prompt"><div class="q">${j.q}</div><div class="a">${j.a}</div></div>
     </div>
     <div class="stamp like">LIKE</div><div class="stamp nope">NOPE</div>`;
+}
+function adCard(a){
+  return `<div class="ad ${a.kind==='Hard'?'hard':'soft'}">
+      <div class="adlabel">✨ Sponsored · grow your match</div>
+      <div class="adicon">${a.icon}</div>
+      <div class="adkind">${a.kind} skill</div>
+      <h2 class="adskill">${a.skill}</h2>
+      <p class="adblurb">${a.blurb}</p>
+      <button class="adcta" onclick="event.stopPropagation();openReelFor('${a.skill}')">▶ Learn in 1 min</button>
+      <div class="adswipe">swipe to skip →</div>
+    </div>
+    <div class="stamp like">LEARN</div><div class="stamp nope">SKIP</div>`;
 }
 function render(){
   renderFilters();
@@ -405,7 +469,7 @@ function topCard(){ const c=stage.querySelectorAll('.card'); return c[c.length-1
 function swipe(dir){
   const c=topCard(); if(!c)return;
   const job=list()[idx];
-  if(job){
+  if(job && !job._ad){
     job.skills.forEach(s=>seenSkills[s]=(seenSkills[s]||0)+1);
     // log to backend (ignored if offline)
     fetch('/api/events/swipe',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -437,6 +501,10 @@ function openReel(){
   document.getElementById('reelSkill').textContent=sk;
   document.getElementById('reel').style.display="flex";
 }
+function openReelFor(skill){   // from an ad card's "Learn in 1 min" CTA
+  document.getElementById('reelSkill').textContent=skill;
+  document.getElementById('reel').style.display="flex";
+}
 function closeReel(){document.getElementById('reel').style.display="none";}
 let tt;
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
@@ -444,7 +512,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 // ---- guided tutorial ----
 const TOUR_ONB=[
   {sel:'#nameInput', t:'Tell us who you are', b:"Your name and whether you're an undergrad or graduate."},
-  {sel:'#cvBox', t:'Upload your CV', b:'Gotcha reads it and auto-detects your skills — no typing needed.'},
+  {sel:'#cvBox', t:'Upload your CV', b:'Gotya reads it and auto-detects your skills — no typing needed.'},
   {sel:'#skillOpts', t:'These power your matches', b:'Skills from your CV get pre-selected here. Add or remove any.'},
   {sel:'#onbGo', t:'Start swiping', b:'We score every role to your profile and sort the best first.'},
 ];
