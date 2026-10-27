@@ -75,6 +75,28 @@
   .reel .foot{padding:16px 20px;display:flex;gap:10px}
   .reel .foot button{flex:1;border:none;border-radius:14px;padding:13px;font-weight:700;font-size:14px;cursor:pointer}
   .reel .skip{background:#2a2748;color:#fff} .reel .go{background:var(--brand);color:#fff}
+  /* match badge */
+  .match{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.22);color:#fff;
+    padding:5px 11px;border-radius:999px;font-size:12px;font-weight:800;display:flex;gap:5px;align-items:center}
+  .match b{font-size:14px}
+  /* onboarding */
+  .onb{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:50;
+    max-width:430px;left:50%;transform:translateX(-50%);padding:0}
+  .onb .top{padding:26px 24px 10px}
+  .onb .step{font-size:12px;font-weight:700;color:var(--brand)}
+  .onb h2{margin:8px 0 4px;font-size:24px}
+  .onb p{margin:0;color:var(--muted);font-size:14px}
+  .onb .scroll{flex:1;overflow:auto;padding:16px 24px}
+  .onb .group{margin-bottom:22px}
+  .onb .group h3{font-size:14px;margin:0 0 10px}
+  .onb .opts{display:flex;flex-wrap:wrap;gap:9px}
+  .onb .opt{border:1.5px solid var(--line);background:#fff;color:var(--muted);padding:9px 14px;
+    border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;user-select:none}
+  .onb .opt.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .onb .cta{padding:16px 24px 26px}
+  .onb .cta button{width:100%;border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:800;
+    color:#fff;background:var(--brand);cursor:pointer;box-shadow:0 12px 26px rgba(107,78,255,.35)}
+  .onb .cta button:disabled{background:#c6bff0;box-shadow:none;cursor:not-allowed}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
     background:#141327;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;transition:.3s;z-index:40}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -101,6 +123,28 @@
     <button class="btn nope" onclick="swipe('left')">✕</button>
     <button class="btn save" onclick="save()">★</button>
     <button class="btn like" onclick="swipe('right')">♥</button>
+  </div>
+</div>
+
+<!-- Onboarding: set criteria + interests -->
+<div class="onb" id="onb">
+  <div class="top">
+    <div class="step">Step 1 of 1 · Set you up</div>
+    <h2>What are you into?</h2>
+    <p>Gotcha pulls only the roles that match. Pick a few — you can change these later.</p>
+  </div>
+  <div class="scroll">
+    <div class="group">
+      <h3>🎯 Skills &amp; interests</h3>
+      <div class="opts" id="skillOpts"></div>
+    </div>
+    <div class="group">
+      <h3>💼 Job types you want</h3>
+      <div class="opts" id="typeOpts"></div>
+    </div>
+  </div>
+  <div class="cta">
+    <button id="onbGo" disabled onclick="finishOnb()">Start swiping</button>
   </div>
 </div>
 
@@ -143,8 +187,35 @@ const JOBS = [
 const FILTERS = ["All","Internship","Graduate","Student job","Side job","Remote"];
 
 let active="All", idx=0, viewed=0, saved=0;
-const reelSkills=["React","Python","SQL"]; let reelPtr=0;
+let userSkills=[], userTypes=[];           // onboarding prefs
+const seenSkills={};                        // frequency of skills in viewed cards
+let reelPtr=0;
 const stage=document.getElementById('stage');
+
+const ALL_SKILLS=["React","TypeScript","Python","SQL","Figma","UI","Java","Ruby","Analytics","SEO","Teaching","Customer care"];
+
+// --- onboarding ---
+function buildOnb(){
+  const sk=document.getElementById('skillOpts');
+  ALL_SKILLS.forEach(s=>{const b=document.createElement('div');b.className="opt";b.textContent=s;
+    b.onclick=()=>{b.classList.toggle('on');toggle(userSkills,s);checkOnb()};sk.appendChild(b)});
+  const tp=document.getElementById('typeOpts');
+  ["Internship","Graduate","Student job","Side job","Remote"].forEach(t=>{
+    const b=document.createElement('div');b.className="opt";b.textContent=t;
+    b.onclick=()=>{b.classList.toggle('on');toggle(userTypes,t);checkOnb()};tp.appendChild(b)});
+  document.getElementById('onb').style.display="flex";
+}
+function toggle(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);}
+function checkOnb(){document.getElementById('onbGo').disabled = userSkills.length===0;}
+function finishOnb(){document.getElementById('onb').style.display="none";render();}
+
+// --- match score: overlap of a job's skills with the user's interests (+type bonus) ---
+function matchPct(j){
+  const overlap=j.skills.filter(s=>userSkills.includes(s)).length;
+  let pct=35 + Math.round(55*(overlap/j.skills.length));
+  if(userTypes.includes(j.type)) pct+=8;
+  return Math.max(40,Math.min(99,pct));
+}
 
 function list(){ return active==="All"?JOBS:JOBS.filter(j=>j.type===active); }
 function renderFilters(){
@@ -154,6 +225,7 @@ function renderFilters(){
 }
 function card(j){
   return `<div class="banner"><span class="src">${j.src}</span>
+      <span class="match">🎯 <b>${matchPct(j)}%</b> match</span>
       <div><div style="font-size:12px;opacity:.85">${j.type}</div><div class="pay">${j.pay}</div></div></div>
     <div class="body">
       <div class="co"><div class="avatar">${j.icon}</div>
@@ -180,6 +252,7 @@ function render(){
 function top(){ const c=stage.querySelectorAll('.card'); return c[c.length-1]; }
 function swipe(dir){
   const c=top(); if(!c)return;
+  const job=list()[idx]; if(job) job.skills.forEach(s=>seenSkills[s]=(seenSkills[s]||0)+1);
   c.style.transform=`translateX(${dir==='right'?600:-600}px) rotate(${dir==='right'?20:-20}deg)`;c.style.opacity=0;
   if(dir==='right') toast("❤️ Added to your applications");
   idx++; viewed++;
@@ -200,7 +273,9 @@ function drag(el){
   el.addEventListener('touchstart',start,{passive:true});el.addEventListener('touchmove',move,{passive:true});el.addEventListener('touchend',end);
 }
 function openReel(){
-  const sk=reelSkills[reelPtr%reelSkills.length];reelPtr++;
+  // real top skill across the cards viewed so far
+  const top=Object.entries(seenSkills).sort((a,b)=>b[1]-a[1])[0];
+  const sk=top?top[0]:"React";reelPtr++;
   document.getElementById('reelSkill').textContent=sk;
   document.getElementById('reel').style.display="flex";
 }
@@ -208,7 +283,7 @@ function closeReel(){document.getElementById('reel').style.display="none";}
 let tt;
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
   clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1400);}
-render();
+buildOnb();   // start at onboarding; render() runs after prefs are set
 </script>
 </body>
 </html>
