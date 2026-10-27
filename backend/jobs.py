@@ -9,42 +9,49 @@ SEED = [
      "skills": ["React", "TypeScript", "CSS"],
      "hours": "Mon–Fri · full-time (summer)",
      "requirements": ["2nd-year+ Computer Science", "Comfortable with React", "A portfolio or GitHub"],
+     "vibe": ["fast", "solo", "office"],
      "q": "We'd geek out over…", "a": "shaving 200ms off a checkout flow."},
     {"co": "UCD Research Lab", "icon": "🔬", "role": "Data Assistant", "type": "Student job",
      "pay": "€15/hr", "loc": "UCD Campus", "src": "UCD Careers",
      "skills": ["Python", "Pandas", "SQL"],
      "hours": "~8 h/week · flexible around lectures",
      "requirements": ["Current UCD student", "Python + basic stats", "Tidy, careful with data"],
+     "vibe": ["structured", "solo", "office"],
      "q": "A perfect week looks like…", "a": "clean data in, one neat chart out."},
     {"co": "Intercom", "icon": "💬", "role": "Grad SWE", "type": "Graduate",
      "pay": "€52k/yr", "loc": "Dublin", "src": "Company site",
      "skills": ["Ruby", "React", "PostgreSQL"],
      "hours": "Mon–Fri · 9:30–18:00",
      "requirements": ["2:1 degree or higher", "One backend language", "Solid CS fundamentals"],
+     "vibe": ["fast", "solo", "office"],
      "q": "You'll fit if…", "a": "you ship small and often."},
     {"co": "Remote.co", "icon": "🌍", "role": "Junior Designer", "type": "Remote",
      "pay": "€1,800/mo", "loc": "Fully remote", "src": "RemoteOK",
      "skills": ["Figma", "UI", "Prototyping"],
      "hours": "Full-time · async, flexible",
      "requirements": ["A Figma portfolio", "1 internship or project", "Self-managed worker"],
+     "vibe": ["fast", "solo", "remote"],
      "q": "Our love language is…", "a": "a tidy component library."},
     {"co": "Café Nero", "icon": "☕", "role": "Weekend Barista", "type": "Side job",
      "pay": "€13.5/hr", "loc": "Dublin 2", "src": "Indeed",
      "skills": ["Customer care", "Teamwork"],
      "hours": "Sat–Sun · 8-hour shifts",
      "requirements": ["No experience needed", "Weekend availability", "Right to work in Ireland"],
+     "vibe": ["people", "structured", "office"],
      "q": "Best shift ever…", "a": "rush hour and a good playlist."},
     {"co": "HubSpot", "icon": "🧡", "role": "Marketing Grad", "type": "Graduate",
      "pay": "€40k/yr", "loc": "Dublin · Hybrid", "src": "LinkedIn",
      "skills": ["Analytics", "SEO", "Content"],
      "hours": "Mon–Fri · hybrid (3 days in office)",
      "requirements": ["Marketing or business degree", "Analytics basics", "Strong writing"],
+     "vibe": ["people", "fast", "office"],
      "q": "We'd swipe right on…", "a": "a data-backed campaign idea."},
     {"co": "TutorMe", "icon": "📚", "role": "CS Tutor", "type": "Student job",
      "pay": "€20/hr", "loc": "Remote", "src": "UCD Careers",
      "skills": ["Java", "Teaching", "React"],
      "hours": "Evenings · 6–10 h/week",
      "requirements": ["Completed intro CS", "Clear communicator", "Flexible evenings"],
+     "vibe": ["people", "structured", "remote"],
      "q": "Ideal match…", "a": "you explain recursion with pizza."},
 ]
 
@@ -117,23 +124,25 @@ def fetch_remoteok(limit=4):
     return out
 
 
-def match_pct(job, user_skills, user_types):
-    """Overlap of a job's skills with the user's interests (+ a type-fit bonus)."""
+def match_pct(job, user_skills, user_types, user_vibes=()):
+    """Skill overlap (+ type-fit bonus + personality/vibe fit)."""
     skills = job["skills"] or []
     overlap = sum(1 for s in skills if s in user_skills)
-    pct = 35 + round(55 * (overlap / len(skills))) if skills else 35
+    pct = 35 + round(50 * (overlap / len(skills))) if skills else 35
     if job["type"] in user_types:
         pct += 8
+    vibe_hits = sum(1 for v in (job.get("vibe") or []) if v in user_vibes)
+    pct += vibe_hits * 4                      # personality-test boost
     return max(40, min(99, pct))
 
 
-def get_jobs(user_skills, user_types, include_live=True):
+def get_jobs(user_skills, user_types, user_vibes=(), include_live=True):
     """Aggregated + scored + sorted feed."""
     pool = list(SEED)
     if include_live:
         pool += fetch_remoteok()
     for j in pool:
-        j["match"] = match_pct(j, user_skills, user_types)
+        j["match"] = match_pct(j, user_skills, user_types, user_vibes)
     pool.sort(key=lambda j: j["match"], reverse=True)
     return pool
 

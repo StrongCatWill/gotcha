@@ -120,6 +120,8 @@
   .cv .t small{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:2px}
   .cv.ok{border-style:solid;background:#eef4f8}
   .hint{font-size:12px;color:var(--brand2);font-weight:600;margin-top:8px}
+  .vq{display:flex;gap:9px;margin-bottom:9px}
+  .vq .opt{flex:1;text-align:center}
   .onb .cta{padding:16px 24px 26px}
   .onb .cta button{width:100%;border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:800;
     color:#fff;background:var(--brand);cursor:pointer;box-shadow:0 12px 26px rgba(79,118,145,.4)}
@@ -201,6 +203,10 @@
       <h3>💼 Job types you want</h3>
       <div class="opts" id="typeOpts"></div>
     </div>
+    <div class="group">
+      <h3>🧭 Work style <small style="font-weight:500;color:var(--muted)">— quick personality check</small></h3>
+      <div id="vibeQs"></div>
+    </div>
   </div>
   <div class="cta">
     <button id="onbGo" disabled onclick="finishOnb()">Start swiping</button>
@@ -262,7 +268,12 @@ const FILTERS = ["All","Internship","Graduate","Student job","Side job","Remote"
 let active="All", idx=0, viewed=0, saved=0;
 let FEED=JOBS;                              // replaced by backend feed after onboarding
 let userSkills=[], userTypes=[];           // onboarding prefs
-let userName="", userStatus="";            // profile
+let userName="", userStatus="", userVibes=[];   // profile + personality
+const VIBE_PAIRS=[                               // either/or personality check
+  [{t:"🚀 Ship fast",v:"fast"},{t:"🧱 Steady & structured",v:"structured"}],
+  [{t:"💬 People-facing",v:"people"},{t:"🎧 Heads-down",v:"solo"}],
+  [{t:"🏢 In office",v:"office"},{t:"🏠 Remote",v:"remote"}],
+];
 const skillEls={};                         // skill label -> chip element
 const seenSkills={};                        // frequency of skills in viewed cards
 let reelPtr=0;
@@ -285,6 +296,18 @@ function buildOnb(){
     const b=document.createElement('div');b.className="opt";b.textContent=s;
     b.onclick=()=>{su.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');userStatus=s;checkOnb()};su.appendChild(b)});
+  const vq=document.getElementById('vibeQs');            // personality either/or
+  VIBE_PAIRS.forEach(pair=>{
+    const row=document.createElement('div');row.className="vq";
+    pair.forEach(o=>{const b=document.createElement('div');b.className="opt";b.textContent=o.t;
+      b.onclick=()=>{
+        row.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+        pair.forEach(p=>{const i=userVibes.indexOf(p.v);if(i>=0)userVibes.splice(i,1)});
+        userVibes.push(o.v);checkOnb();
+      };row.appendChild(b)});
+    vq.appendChild(row);
+  });
   document.getElementById('onb').style.display="flex";
 }
 function toggle(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);}
@@ -327,7 +350,7 @@ async function finishOnb(){
 // Fetch the scored feed from the Python backend; fall back to local JOBS (file:// mode).
 async function loadJobs(){
   try{
-    const q=new URLSearchParams({skills:userSkills.join(","),types:userTypes.join(",")});
+    const q=new URLSearchParams({skills:userSkills.join(","),types:userTypes.join(","),vibes:userVibes.join(",")});
     const r=await fetch(`/api/jobs?${q}`);
     const d=await r.json();
     if(d.jobs && d.jobs.length){ FEED=d.jobs; return; }

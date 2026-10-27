@@ -33,7 +33,8 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(u.query)
             skills = [s for s in (qs.get("skills", [""])[0]).split(",") if s]
             types = [t for t in (qs.get("types", [""])[0]).split(",") if t]
-            return self._json({"jobs": jobs.get_jobs(skills, types)})
+            vibes = [v for v in (qs.get("vibes", [""])[0]).split(",") if v]
+            return self._json({"jobs": jobs.get_jobs(skills, types, vibes)})
         if u.path == "/api/insights/top-skill":
             return self._json({"skill": jobs.top_skill()})
         # static: index.html + anything else in repo root
