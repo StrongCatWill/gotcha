@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gotcha — job swiping for UCD students</title>
+<style>
+  :root{
+    --bg:#eef0fb; --ink:#141327; --muted:#6b6a86;
+    --brand:#6b4eff; --brand2:#9b7bff; --like:#1fbf75; --nope:#ff5a6a;
+    --card:#ffffff; --line:#e7e6f5;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--ink);display:flex;justify-content:center;min-height:100vh}
+  .phone{width:100%;max-width:430px;background:#f6f6fc;min-height:100vh;position:relative;
+    display:flex;flex-direction:column;overflow:hidden}
+  header{padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px}
+  .logo .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand2));
+    display:grid;place-items:center;color:#fff;font-size:16px}
+  .count{font-size:12px;color:var(--muted)}
+  .filters{display:flex;gap:8px;overflow-x:auto;padding:4px 18px 12px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;border:1px solid var(--line);background:#fff;color:var(--muted);
+    padding:7px 13px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .stage{flex:1;position:relative;margin:0 14px}
+  .card{position:absolute;inset:0;background:var(--card);border-radius:24px;overflow:hidden;
+    box-shadow:0 18px 40px rgba(60,40,140,.16);display:flex;flex-direction:column;
+    transition:transform .35s ease,opacity .35s ease;will-change:transform}
+  .banner{height:140px;background:linear-gradient(135deg,var(--brand),var(--brand2));position:relative;
+    padding:16px;color:#fff;display:flex;flex-direction:column;justify-content:space-between}
+  .src{align-self:flex-start;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:999px;
+    font-size:11px;font-weight:700;letter-spacing:.3px}
+  .pay{font-size:22px;font-weight:800}
+  .body{padding:16px 18px;overflow:auto;flex:1}
+  .co{display:flex;align-items:center;gap:12px;margin-top:-34px}
+  .avatar{width:56px;height:56px;border-radius:16px;background:#fff;border:3px solid #fff;
+    display:grid;place-items:center;font-size:26px;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+  .co h2{margin:0;font-size:19px}
+  .co p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+  .tags{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+  .tag{background:#f0eefc;color:var(--brand);font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;font-size:13px;color:var(--muted)}
+  .meta b{color:var(--ink)}
+  .prompt{background:#f7f7fc;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px}
+  .prompt .q{font-size:12px;color:var(--brand);font-weight:700;margin-bottom:4px}
+  .prompt .a{font-size:14px;line-height:1.5}
+  .stamp{position:absolute;top:26px;font-size:30px;font-weight:900;padding:6px 16px;border:4px solid;
+    border-radius:12px;opacity:0;transform:rotate(-14deg);pointer-events:none}
+  .stamp.like{left:20px;color:var(--like);border-color:var(--like)}
+  .stamp.nope{right:20px;color:var(--nope);border-color:var(--nope)}
+  .actions{display:flex;justify-content:center;gap:22px;padding:16px 0 22px}
+  .btn{width:60px;height:60px;border-radius:50%;border:none;background:#fff;font-size:24px;cursor:pointer;
+    box-shadow:0 10px 24px rgba(60,40,140,.18);display:grid;place-items:center;transition:transform .1s}
+  .btn:active{transform:scale(.9)}
+  .btn.nope{color:var(--nope)} .btn.like{color:var(--like)} .btn.save{color:var(--brand);font-size:20px}
+  .empty{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;color:var(--muted);padding:30px}
+  /* hidden reel overlay */
+  .reel{position:fixed;inset:0;background:rgba(10,8,30,.55);display:none;align-items:center;justify-content:center;z-index:30}
+  .reel .sheet{width:100%;max-width:400px;background:#120f29;color:#fff;border-radius:26px;overflow:hidden;
+    box-shadow:0 30px 60px rgba(0,0,0,.4)}
+  .reel .vid{aspect-ratio:9/13;background:linear-gradient(160deg,#2a1f6b,#6b4eff);position:relative;
+    display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
+  .reel .play{position:absolute;inset:0;display:grid;place-items:center;font-size:54px;color:rgba(255,255,255,.9)}
+  .reel .pill{position:absolute;top:16px;left:16px;background:rgba(255,255,255,.2);padding:5px 12px;
+    border-radius:999px;font-size:12px;font-weight:700}
+  .reel h3{margin:0 0 6px;font-size:20px}
+  .reel .skill{font-size:28px;font-weight:800}
+  .reel .bar{height:4px;background:rgba(255,255,255,.25);border-radius:4px;margin-top:14px;overflow:hidden}
+  .reel .bar i{display:block;height:100%;width:0;background:#fff;animation:grow 60s linear forwards}
+  @keyframes grow{to{width:100%}}
+  .reel .foot{padding:16px 20px;display:flex;gap:10px}
+  .reel .foot button{flex:1;border:none;border-radius:14px;padding:13px;font-weight:700;font-size:14px;cursor:pointer}
+  .reel .skip{background:#2a2748;color:#fff} .reel .go{background:var(--brand);color:#fff}
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#141327;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;transition:.3s;z-index:40}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div class="logo"><span class="mark">G</span> Gotcha</div>
+    <div class="count" id="count"></div>
+  </header>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="stage" id="stage">
+    <div class="empty" id="empty">
+      <div style="font-size:48px">🎉</div>
+      <h2>You're all caught up</h2>
+      <p>Switch a filter or come back tomorrow. Saved roles live in your profile.</p>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn nope" onclick="swipe('left')">✕</button>
+    <button class="btn save" onclick="save()">★</button>
+    <button class="btn like" onclick="swipe('right')">♥</button>
+  </div>
+</div>
+
+<!-- Hidden feature: skill reel after 5 views -->
+<div class="reel" id="reel">
+  <div class="sheet">
+    <div class="vid">
+      <div class="pill">🔓 5 cards viewed · 1-min skill recap</div>
+      <div class="play">▶</div>
+      <div class="skill" id="reelSkill">React</div>
+      <h3 id="reelTitle">The skill that showed up most in the roles you viewed</h3>
+      <div class="bar"><i></i></div>
+    </div>
+    <div class="foot">
+      <button class="skip" onclick="closeReel()">Later</button>
+      <button class="go" onclick="closeReel()">Watch 1-min video</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const JOBS = [
+  {co:"Stripe", icon:"💳", role:"Frontend Intern", type:"Internship", pay:"€2,400/mo", loc:"Dublin · Hybrid",
+   src:"LinkedIn", skills:["React","TypeScript","CSS"], q:"We'd geek out over…", a:"shaving 200ms off a checkout flow."},
+  {co:"UCD Research Lab", icon:"🔬", role:"Data Assistant", type:"Student job", pay:"€15/hr", loc:"UCD Campus",
+   src:"UCD Careers", skills:["Python","Pandas","SQL"], q:"A perfect week looks like…", a:"clean data in, one neat chart out."},
+  {co:"Intercom", icon:"💬", role:"Grad SWE", type:"Graduate", pay:"€52k/yr", loc:"Dublin",
+   src:"Company site", skills:["Ruby","React","PostgreSQL"], q:"You'll fit if…", a:"you ship small and often."},
+  {co:"Remote.co", icon:"🌍", role:"Junior Designer", type:"Remote", pay:"€1,800/mo", loc:"Fully remote",
+   src:"RemoteOK", skills:["Figma","UI","Prototyping"], q:"Our love language is…", a:"a tidy component library."},
+  {co:"Café Nero", icon:"☕", role:"Weekend Barista", type:"Side job", pay:"€13.5/hr", loc:"Dublin 2",
+   src:"Indeed", skills:["Customer care","Teamwork"], q:"Best shift ever…", a:"rush hour and a good playlist."},
+  {co:"HubSpot", icon:"🧡", role:"Marketing Grad", type:"Graduate", pay:"€40k/yr", loc:"Dublin · Hybrid",
+   src:"LinkedIn", skills:["Analytics","SEO","Content"], q:"We'd swipe right on…", a:"a data-backed campaign idea."},
+  {co:"TutorMe", icon:"📚", role:"CS Tutor", type:"Student job", pay:"€20/hr", loc:"Remote",
+   src:"UCD Careers", skills:["Java","Teaching","React"], q:"Ideal match…", a:"you explain recursion with pizza."},
+];
+const FILTERS = ["All","Internship","Graduate","Student job","Side job","Remote"];
+
+let active="All", idx=0, viewed=0, saved=0;
+const reelSkills=["React","Python","SQL"]; let reelPtr=0;
+const stage=document.getElementById('stage');
+
+function list(){ return active==="All"?JOBS:JOBS.filter(j=>j.type===active); }
+function renderFilters(){
+  const f=document.getElementById('filters'); f.innerHTML="";
+  FILTERS.forEach(x=>{const b=document.createElement('div');b.className="chip"+(x===active?" on":"");
+    b.textContent=x;b.onclick=()=>{active=x;idx=0;render()};f.appendChild(b)});
+}
+function card(j){
+  return `<div class="banner"><span class="src">${j.src}</span>
+      <div><div style="font-size:12px;opacity:.85">${j.type}</div><div class="pay">${j.pay}</div></div></div>
+    <div class="body">
+      <div class="co"><div class="avatar">${j.icon}</div>
+        <div><h2>${j.role}</h2><p>${j.co}</p></div></div>
+      <div class="meta"><span>📍 <b>${j.loc}</b></span></div>
+      <div class="tags">${j.skills.map(s=>`<span class="tag">${s}</span>`).join("")}</div>
+      <div class="prompt"><div class="q">${j.q}</div><div class="a">${j.a}</div></div>
+    </div>
+    <div class="stamp like">LIKE</div><div class="stamp nope">NOPE</div>`;
+}
+function render(){
+  renderFilters();
+  [...stage.querySelectorAll('.card')].forEach(c=>c.remove());
+  const jobs=list();
+  document.getElementById('empty').style.display = idx>=jobs.length?"flex":"none";
+  for(let k=Math.min(idx+1,jobs.length-1);k>=idx;k--){
+    if(k<0||k>=jobs.length)continue;
+    const el=document.createElement('div');el.className="card";el.innerHTML=card(jobs[k]);
+    el.style.transform=`scale(${1-(k-idx)*0.04}) translateY(${(k-idx)*10}px)`;
+    el.style.zIndex=100-k; if(k===idx) drag(el); stage.appendChild(el);
+  }
+  document.getElementById('count').textContent=`${viewed} viewed · ${saved} saved`;
+}
+function top(){ const c=stage.querySelectorAll('.card'); return c[c.length-1]; }
+function swipe(dir){
+  const c=top(); if(!c)return;
+  c.style.transform=`translateX(${dir==='right'?600:-600}px) rotate(${dir==='right'?20:-20}deg)`;c.style.opacity=0;
+  if(dir==='right') toast("❤️ Added to your applications");
+  idx++; viewed++;
+  setTimeout(()=>{ render(); if(viewed>0 && viewed%5===0) openReel(); },260);
+}
+function save(){ saved++; toast("★ Saved"); document.getElementById('count').textContent=`${viewed} viewed · ${saved} saved`; }
+function drag(el){
+  let sx=0,dx=0,down=false;
+  const start=e=>{down=true;sx=(e.touches?e.touches[0].clientX:e.clientX);el.style.transition="none"};
+  const move=e=>{if(!down)return;dx=(e.touches?e.touches[0].clientX:e.clientX)-sx;
+    el.style.transform=`translateX(${dx}px) rotate(${dx/20}deg)`;
+    el.querySelector('.stamp.like').style.opacity=dx>0?Math.min(dx/80,1):0;
+    el.querySelector('.stamp.nope').style.opacity=dx<0?Math.min(-dx/80,1):0;};
+  const end=()=>{if(!down)return;down=false;el.style.transition="transform .35s ease,opacity .35s ease";
+    if(Math.abs(dx)>110)swipe(dx>0?'right':'left');
+    else{el.style.transform="";el.querySelectorAll('.stamp').forEach(s=>s.style.opacity=0)}dx=0;};
+  el.addEventListener('mousedown',start);window.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
+  el.addEventListener('touchstart',start,{passive:true});el.addEventListener('touchmove',move,{passive:true});el.addEventListener('touchend',end);
+}
+function openReel(){
+  const sk=reelSkills[reelPtr%reelSkills.length];reelPtr++;
+  document.getElementById('reelSkill').textContent=sk;
+  document.getElementById('reel').style.display="flex";
+}
+function closeReel(){document.getElementById('reel').style.display="none";}
+let tt;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1400);}
+render();
+</script>
+</body>
+</html>
