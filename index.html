@@ -2,7 +2,13 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<!-- iOS: add-to-home-screen, run full-screen like a native app -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Gotcha" />
+<meta name="theme-color" content="#6b4eff" />
 <title>Gotcha — job swiping for UCD students</title>
 <style>
   :root{
@@ -12,9 +18,14 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:var(--bg);color:var(--ink);display:flex;justify-content:center;min-height:100vh}
-  .phone{width:100%;max-width:430px;background:#f6f6fc;min-height:100vh;position:relative;
+    background:#d9dcf0;color:var(--ink);display:flex;align-items:center;justify-content:center;
+    min-height:100vh;min-height:100dvh}
+  /* locked to an iPhone-sized frame */
+  .phone{width:min(100vw,390px);height:min(100dvh,844px);background:#f6f6fc;position:relative;
     display:flex;flex-direction:column;overflow:hidden}
+  @media (min-width:431px){            /* desktop: show a phone frame */
+    .phone{border-radius:44px;box-shadow:0 30px 70px rgba(40,30,110,.28);border:10px solid #141327}
+  }
   header{padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between}
   .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px}
   .logo .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand2));
@@ -80,8 +91,10 @@
     padding:5px 11px;border-radius:999px;font-size:12px;font-weight:800;display:flex;gap:5px;align-items:center}
   .match b{font-size:14px}
   /* onboarding */
-  .onb{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:50;
-    max-width:430px;left:50%;transform:translateX(-50%);padding:0}
+  .onb{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(100vw,390px);height:min(100dvh,844px);background:var(--bg);
+    display:none;flex-direction:column;z-index:50;padding:0;overflow:hidden}
+  @media (min-width:431px){ .onb{border-radius:44px} }
   .onb .top{padding:26px 24px 10px}
   .onb .step{font-size:12px;font-weight:700;color:var(--brand)}
   .onb h2{margin:8px 0 4px;font-size:24px}
@@ -187,6 +200,7 @@ const JOBS = [
 const FILTERS = ["All","Internship","Graduate","Student job","Side job","Remote"];
 
 let active="All", idx=0, viewed=0, saved=0;
+let FEED=JOBS;                              // replaced by backend feed after onboarding
 let userSkills=[], userTypes=[];           // onboarding prefs
 const seenSkills={};                        // frequency of skills in viewed cards
 let reelPtr=0;
@@ -207,17 +221,33 @@ function buildOnb(){
 }
 function toggle(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);}
 function checkOnb(){document.getElementById('onbGo').disabled = userSkills.length===0;}
-function finishOnb(){document.getElementById('onb').style.display="none";render();}
+async function finishOnb(){
+  document.getElementById('onb').style.display="none";
+  await loadJobs();
+  render();
+}
 
-// --- match score: overlap of a job's skills with the user's interests (+type bonus) ---
+// Fetch the scored feed from the Python backend; fall back to local JOBS (file:// mode).
+async function loadJobs(){
+  try{
+    const q=new URLSearchParams({skills:userSkills.join(","),types:userTypes.join(",")});
+    const r=await fetch(`/api/jobs?${q}`);
+    const d=await r.json();
+    if(d.jobs && d.jobs.length){ FEED=d.jobs; return; }
+  }catch(e){ /* offline / file:// — use embedded sample */ }
+  FEED=JOBS;
+}
+
+// --- match score: use backend value if present, else compute locally ---
 function matchPct(j){
+  if(typeof j.match==='number') return j.match;
   const overlap=j.skills.filter(s=>userSkills.includes(s)).length;
   let pct=35 + Math.round(55*(overlap/j.skills.length));
   if(userTypes.includes(j.type)) pct+=8;
   return Math.max(40,Math.min(99,pct));
 }
 
-function list(){ return active==="All"?JOBS:JOBS.filter(j=>j.type===active); }
+function list(){ return active==="All"?FEED:FEED.filter(j=>j.type===active); }
 function renderFilters(){
   const f=document.getElementById('filters'); f.innerHTML="";
   FILTERS.forEach(x=>{const b=document.createElement('div');b.className="chip"+(x===active?" on":"");
@@ -249,10 +279,16 @@ function render(){
   }
   document.getElementById('count').textContent=`${viewed} viewed · ${saved} saved`;
 }
-function top(){ const c=stage.querySelectorAll('.card'); return c[c.length-1]; }
+function topCard(){ const c=stage.querySelectorAll('.card'); return c[c.length-1]; }
 function swipe(dir){
-  const c=top(); if(!c)return;
-  const job=list()[idx]; if(job) job.skills.forEach(s=>seenSkills[s]=(seenSkills[s]||0)+1);
+  const c=topCard(); if(!c)return;
+  const job=list()[idx];
+  if(job){
+    job.skills.forEach(s=>seenSkills[s]=(seenSkills[s]||0)+1);
+    // log to backend (ignored if offline)
+    fetch('/api/events/swipe',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({role:job.role,dir,skills:job.skills})}).catch(()=>{});
+  }
   c.style.transform=`translateX(${dir==='right'?600:-600}px) rotate(${dir==='right'?20:-20}deg)`;c.style.opacity=0;
   if(dir==='right') toast("❤️ Added to your applications");
   idx++; viewed++;
@@ -274,8 +310,8 @@ function drag(el){
 }
 function openReel(){
   // real top skill across the cards viewed so far
-  const top=Object.entries(seenSkills).sort((a,b)=>b[1]-a[1])[0];
-  const sk=top?top[0]:"React";reelPtr++;
+  const ranked=Object.entries(seenSkills).sort((a,b)=>b[1]-a[1])[0];
+  const sk=ranked?ranked[0]:"React";reelPtr++;
   document.getElementById('reelSkill').textContent=sk;
   document.getElementById('reel').style.display="flex";
 }
