@@ -41,6 +41,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path)
+        if u.path == "/api/cv":
+            n = int(self.headers.get("Content-Length") or 0)
+            try:
+                payload = json.loads(self.rfile.read(n) or b"{}")
+            except Exception:
+                payload = {}
+            skills = jobs.detect_skills(payload.get("text", ""))
+            return self._json({"skills": skills})
         if u.path == "/api/events/swipe":
             n = int(self.headers.get("Content-Length") or 0)
             try:

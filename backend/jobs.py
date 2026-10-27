@@ -37,6 +37,32 @@ SEED = [
 # In-memory event log (swipes) — would be a DB in production.
 EVENTS = []
 
+# Canonical skill -> aliases we look for in an uploaded CV.
+SKILL_VOCAB = {
+    "React": ["react", "react.js", "reactjs"],
+    "TypeScript": ["typescript", "ts"],
+    "Python": ["python", "pandas", "numpy", "django", "flask"],
+    "SQL": ["sql", "postgres", "postgresql", "mysql", "sqlite"],
+    "Figma": ["figma", "sketch"],
+    "UI": ["ui", "ux", "ui/ux", "user interface", "wireframe"],
+    "Java": ["java", "spring"],
+    "Ruby": ["ruby", "rails"],
+    "Analytics": ["analytics", "google analytics", "tableau", "power bi", "data analysis"],
+    "SEO": ["seo", "search engine"],
+    "Teaching": ["teaching", "tutor", "tutoring", "mentor"],
+    "Customer care": ["customer", "barista", "retail", "hospitality", "support"],
+}
+
+
+def detect_skills(text):
+    """Scan CV text and return the canonical skills it mentions."""
+    t = (text or "").lower()
+    found = []
+    for skill, aliases in SKILL_VOCAB.items():
+        if any(a in t for a in aliases):
+            found.append(skill)
+    return found
+
 
 def fetch_remoteok(limit=4):
     """Pull a few live remote roles from RemoteOK's public JSON API.

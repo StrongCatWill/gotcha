@@ -1,0 +1,12 @@
+Aoife Byrne — UCD BSc Computer Science (final year)
+
+SKILLS
+- Python (pandas, Flask), SQL (PostgreSQL)
+- React + TypeScript front-end development
+- Figma for UI/UX wireframes
+
+EXPERIENCE
+- Teaching assistant / tutor for first-year programming
+- Part-time barista — customer service, teamwork
+
+Looking for graduate software or data roles in Dublin or remote.

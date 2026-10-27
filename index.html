@@ -106,10 +106,36 @@
   .onb .opt{border:1.5px solid var(--line);background:#fff;color:var(--muted);padding:9px 14px;
     border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;user-select:none}
   .onb .opt.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .onb input{width:100%;border:1.5px solid var(--line);background:#fff;border-radius:14px;
+    padding:13px 15px;font-size:15px;color:var(--ink);outline:none}
+  .onb input:focus{border-color:var(--brand)}
+  .cv{display:flex;align-items:center;gap:12px;border:1.5px dashed var(--brand);background:#fff;
+    border-radius:14px;padding:14px 15px;cursor:pointer}
+  .cv .ic{font-size:22px}
+  .cv .t{flex:1;font-size:14px;font-weight:600}
+  .cv .t small{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:2px}
+  .cv.ok{border-style:solid;background:#eef4f8}
+  .hint{font-size:12px;color:var(--brand2);font-weight:600;margin-top:8px}
   .onb .cta{padding:16px 24px 26px}
   .onb .cta button{width:100%;border:none;border-radius:16px;padding:16px;font-size:16px;font-weight:800;
     color:#fff;background:var(--brand);cursor:pointer;box-shadow:0 12px 26px rgba(79,118,145,.4)}
   .onb .cta button:disabled{background:#b6c8d6;box-shadow:none;cursor:not-allowed}
+  /* guided tutorial */
+  .tour{position:fixed;inset:0;z-index:60;display:none}
+  .tour .spot{position:absolute;border-radius:16px;box-shadow:0 0 0 9999px rgba(20,28,38,.72);
+    border:2px solid var(--brand);transition:all .25s ease;pointer-events:none}
+  .tour .tip{position:absolute;max-width:300px;background:#fff;border-radius:16px;padding:15px 17px;
+    box-shadow:0 16px 40px rgba(20,28,38,.35);transition:all .25s ease}
+  .tour .tip .n{font-size:12px;font-weight:700;color:var(--brand)}
+  .tour .tip h4{margin:5px 0 5px;font-size:16px}
+  .tour .tip p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
+  .tour .tip .row{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+  .tour .tip .skip{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer}
+  .tour .tip .next{background:var(--brand);color:#fff;border:none;border-radius:10px;
+    padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer}
+  .help{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:50%;border:none;
+    background:#fff;color:var(--brand);font-size:16px;font-weight:800;cursor:pointer;z-index:20;
+    box-shadow:0 6px 16px rgba(42,60,74,.18)}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
     background:#141327;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;transition:.3s;z-index:40}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -117,6 +143,7 @@
 </head>
 <body>
 <div class="phone">
+  <button class="help" onclick="startTour()" title="How it works">?</button>
   <header>
     <div class="logo"><span class="mark">G</span> Gotcha</div>
     <div class="count" id="count"></div>
@@ -147,6 +174,21 @@
     <p>Gotcha pulls only the roles that match. Pick a few — you can change these later.</p>
   </div>
   <div class="scroll">
+    <div class="group">
+      <h3>👋 Your details</h3>
+      <input id="nameInput" placeholder="Your name" oninput="checkOnb()" />
+      <div style="height:10px"></div>
+      <div class="opts" id="statusOpts"></div>
+    </div>
+    <div class="group">
+      <h3>📄 Upload your CV</h3>
+      <label class="cv" id="cvBox">
+        <span class="ic">📄</span>
+        <span class="t" id="cvText">Tap to upload<small>PDF or .txt — we auto-detect your skills</small></span>
+        <input type="file" accept=".pdf,.txt,.md,.doc,.docx" style="display:none" onchange="readCV(this)" />
+      </label>
+      <div class="hint" id="cvHint" style="display:none"></div>
+    </div>
     <div class="group">
       <h3>🎯 Skills &amp; interests</h3>
       <div class="opts" id="skillOpts"></div>
@@ -180,6 +222,20 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Guided tutorial overlay -->
+<div class="tour" id="tour">
+  <div class="spot" id="tourSpot"></div>
+  <div class="tip" id="tourTip">
+    <div class="n" id="tourN"></div>
+    <h4 id="tourTitle"></h4>
+    <p id="tourBody"></p>
+    <div class="row">
+      <button class="skip" onclick="endTour()">Skip</button>
+      <button class="next" id="tourNext" onclick="nextTour()">Next</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const JOBS = [
   {co:"Stripe", icon:"💳", role:"Frontend Intern", type:"Internship", pay:"€2,400/mo", loc:"Dublin · Hybrid",
@@ -202,6 +258,8 @@ const FILTERS = ["All","Internship","Graduate","Student job","Side job","Remote"
 let active="All", idx=0, viewed=0, saved=0;
 let FEED=JOBS;                              // replaced by backend feed after onboarding
 let userSkills=[], userTypes=[];           // onboarding prefs
+let userName="", userStatus="";            // profile
+const skillEls={};                         // skill label -> chip element
 const seenSkills={};                        // frequency of skills in viewed cards
 let reelPtr=0;
 const stage=document.getElementById('stage');
@@ -212,15 +270,48 @@ const ALL_SKILLS=["React","TypeScript","Python","SQL","Figma","UI","Java","Ruby"
 function buildOnb(){
   const sk=document.getElementById('skillOpts');
   ALL_SKILLS.forEach(s=>{const b=document.createElement('div');b.className="opt";b.textContent=s;
+    skillEls[s]=b;
     b.onclick=()=>{b.classList.toggle('on');toggle(userSkills,s);checkOnb()};sk.appendChild(b)});
   const tp=document.getElementById('typeOpts');
   ["Internship","Graduate","Student job","Side job","Remote"].forEach(t=>{
     const b=document.createElement('div');b.className="opt";b.textContent=t;
     b.onclick=()=>{b.classList.toggle('on');toggle(userTypes,t);checkOnb()};tp.appendChild(b)});
+  const su=document.getElementById('statusOpts');       // single-select status
+  ["Undergraduate","Graduate","Postgrad"].forEach(s=>{
+    const b=document.createElement('div');b.className="opt";b.textContent=s;
+    b.onclick=()=>{su.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');userStatus=s;checkOnb()};su.appendChild(b)});
   document.getElementById('onb').style.display="flex";
 }
 function toggle(arr,v){const i=arr.indexOf(v);i<0?arr.push(v):arr.splice(i,1);}
-function checkOnb(){document.getElementById('onbGo').disabled = userSkills.length===0;}
+function selectSkill(s){ // turn a chip on (used by CV auto-fill)
+  const el=skillEls[s]; if(!el||userSkills.includes(s))return;
+  el.classList.add('on'); userSkills.push(s);
+}
+// Read the CV in-browser, send text to backend, auto-select detected skills.
+async function readCV(input){
+  const f=input.files[0]; if(!f)return;
+  document.getElementById('cvText').innerHTML=`${f.name}<small>Reading…</small>`;
+  const text=await f.text().catch(()=>"");
+  let skills=[];
+  try{
+    const r=await fetch('/api/cv',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text})});
+    skills=(await r.json()).skills||[];
+  }catch(e){ skills=[]; }
+  skills.forEach(selectSkill);
+  document.getElementById('cvBox').classList.add('ok');
+  document.getElementById('cvText').innerHTML=`${f.name}<small>✓ CV read</small>`;
+  const hint=document.getElementById('cvHint'); hint.style.display="block";
+  hint.textContent = skills.length
+    ? `✨ Detected: ${skills.join(", ")} — pre-selected below`
+    : `No skills auto-detected — pick a few below (PDFs read best as text).`;
+  checkOnb();
+}
+function checkOnb(){
+  userName=document.getElementById('nameInput').value.trim();
+  document.getElementById('onbGo').disabled = !(userName && userSkills.length>0);
+}
 async function finishOnb(){
   document.getElementById('onb').style.display="none";
   await loadJobs();

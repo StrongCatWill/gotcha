@@ -9,6 +9,7 @@ Run the prototype: just open `index.html` in a browser (no build needed).
 ## Core concept
 - **Swipe**: ❤️ apply / ✕ pass / ★ save — Hinge-style mechanic.
 - **Multi-source aggregation**: jobs from LinkedIn · UCD Careers · company career pages · RemoteOK · Indeed in one feed.
+- **CV-powered onboarding**: enter your details + upload a CV; Gotcha reads it and auto-selects your skills, which drive every match score.
 - **Job-type filters**: Internship / Graduate / Student job / Side job / Remote.
 - 🔓 **Hidden feature**: every 5 cards, the skill that appeared most across the roles you viewed is summarized as a **1-minute video**, served like an ad.
 
@@ -47,6 +48,7 @@ Run the prototype: just open `index.html` in a browser (no build needed).
 - [x] Hinge-style prompts ("We'd geek out over…")
 - [x] Skill 1-min recap reel pops after every 5 cards
 - [x] Viewed / saved counter
+- [x] Onboarding: name + status + **CV upload → auto-detected skills** (`/api/cv`)
 - [ ] (next) Onboarding criteria → personalized feed
 
 ---
