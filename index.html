@@ -89,7 +89,7 @@
   .empty{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;color:var(--muted);padding:30px}
   /* hidden reel overlay */
-  .reel{position:fixed;inset:0;background:rgba(10,8,30,.55);display:none;align-items:center;justify-content:center;z-index:30}
+  .reel{position:fixed;inset:0;background:rgba(10,8,30,.55);display:none;align-items:center;justify-content:center;z-index:120}
   .reel .sheet{width:100%;max-width:400px;background:#14222d;color:#fff;border-radius:26px;overflow:hidden;
     box-shadow:0 30px 60px rgba(0,0,0,.4)}
   .reel .vid{aspect-ratio:9/13;background:linear-gradient(160deg,#2f4a5e,#78A1BF);position:relative;
@@ -158,6 +158,33 @@
     background:#fff;color:var(--brand);font-size:16px;font-weight:800;cursor:pointer;z-index:20;
     box-shadow:0 6px 16px rgba(42,60,74,.18)}
   .logomark{height:30px;width:auto;display:block}
+  .hdr-right{display:flex;align-items:center;gap:10px}
+  .listbtn{position:relative;border:none;background:#fff;width:40px;height:40px;border-radius:12px;
+    font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(60,40,140,.1)}
+  .listbtn .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 4px;
+    background:var(--nope);color:#fff;font-size:11px;font-weight:800;border-radius:9px;display:grid;place-items:center}
+  /* saved & applied list */
+  .listview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(100vw,390px);height:min(100dvh,844px);background:var(--bg);z-index:110;
+    display:none;flex-direction:column;overflow:hidden}
+  @media (min-width:431px){ .listview{border-radius:44px} }
+  .listview .lhead{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 10px}
+  .listview .lhead h2{margin:0;font-size:22px}
+  .listview .close{border:none;background:#fff;width:36px;height:36px;border-radius:50%;font-size:16px;
+    cursor:pointer;box-shadow:0 4px 12px rgba(60,40,140,.12)}
+  .ltabs{display:flex;gap:8px;padding:4px 20px 12px}
+  .ltab{flex:1;text-align:center;padding:10px;border-radius:12px;font-weight:700;font-size:14px;
+    background:#fff;color:var(--muted);border:1px solid var(--line);cursor:pointer}
+  .ltab.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .lrows{flex:1;overflow:auto;padding:4px 16px 20px}
+  .lrow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);
+    border-radius:14px;padding:12px;margin-bottom:10px}
+  .lrow .av{width:44px;height:44px;border-radius:12px;background:var(--bg);display:grid;place-items:center;font-size:22px;flex-shrink:0}
+  .lrow .info{flex:1;min-width:0}
+  .lrow .info h4{margin:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .info p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+  .lrow .pct{font-size:13px;font-weight:800;color:var(--brand2);white-space:nowrap}
+  .lempty{text-align:center;color:var(--muted);padding:50px 20px;font-size:14px}
   /* splash intro */
   .splash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
     width:min(100vw,390px);height:min(100dvh,844px);background:#fff;z-index:60;
@@ -181,7 +208,12 @@
   <button class="help" onclick="startTour()" title="How it works">?</button>
   <header>
     <div class="logo"><img src="assets/logo.png" alt="Gotya!" class="logomark" /></div>
-    <div class="count" id="count"></div>
+    <div class="hdr-right">
+      <div class="count" id="count"></div>
+      <button class="listbtn" onclick="openList()" title="Saved & applied">📋
+        <span class="badge" id="listCount" style="display:none">0</span>
+      </button>
+    </div>
   </header>
 
   <div class="filters" id="filters"></div>
@@ -251,6 +283,19 @@
   </div>
 </div>
 
+<!-- Saved & applied list -->
+<div class="listview" id="listView">
+  <div class="lhead">
+    <h2>Your jobs</h2>
+    <button class="close" onclick="closeList()">✕</button>
+  </div>
+  <div class="ltabs">
+    <div class="ltab on" id="tabApplied" onclick="switchList('applied')">❤️ Applied</div>
+    <div class="ltab" id="tabSaved" onclick="switchList('saved')">★ Saved</div>
+  </div>
+  <div class="lrows" id="lrows"></div>
+</div>
+
 <!-- Hidden feature: skill reel after 5 views -->
 <div class="reel" id="reel">
   <div class="sheet">
@@ -305,6 +350,7 @@ const FILTERS = ["All","Internship","Graduate","Student job","Side job","Remote"
 
 let active="All", idx=0, viewed=0, saved=0;
 let FEED=JOBS;                              // replaced by backend feed after onboarding
+const applied=[], savedJobs=[];            // right-swiped & ★-saved jobs
 let userSkills=[], userTypes=[];           // onboarding prefs
 let userName="", userStatus="", userLink="", userVibes=[];   // profile + personality
 const VIBE_PAIRS=[                               // either/or personality check
@@ -487,7 +533,7 @@ function render(){
     el.style.transform=`scale(${1-(k-idx)*0.04}) translateY(${(k-idx)*10}px)`;
     el.style.zIndex=100-k; if(k===idx) drag(el); stage.appendChild(el);
   }
-  document.getElementById('count').textContent=`${viewed} viewed · ${saved} saved`;
+  updateBadge();
 }
 function topCard(){ const c=stage.querySelectorAll('.card'); return c[c.length-1]; }
 function swipe(dir){
@@ -495,6 +541,8 @@ function swipe(dir){
   const job=list()[idx];
   if(job && !job._ad){
     job.skills.forEach(s=>seenSkills[s]=(seenSkills[s]||0)+1);
+    if(dir==='right' && !applied.some(a=>a.role===job.role&&a.co===job.co)) applied.push(job);
+    updateBadge();
     // log to backend (ignored if offline)
     fetch('/api/events/swipe',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({role:job.role,dir,skills:job.skills})}).catch(()=>{});
@@ -504,7 +552,16 @@ function swipe(dir){
   idx++; viewed++;
   setTimeout(()=>{ render(); if(viewed>0 && viewed%5===0) openReel(); },260);
 }
-function save(){ saved++; toast("★ Saved"); document.getElementById('count').textContent=`${viewed} viewed · ${saved} saved`; }
+function save(){
+  const job=list()[idx];
+  if(job && !job._ad && !savedJobs.some(s=>s.role===job.role&&s.co===job.co)){ savedJobs.push(job); saved++; }
+  toast("★ Saved"); updateBadge();
+}
+function updateBadge(){
+  document.getElementById('count').textContent=`${applied.length} applied · ${savedJobs.length} saved`;
+  const b=document.getElementById('listCount'); const n=applied.length+savedJobs.length;
+  if(b){ b.textContent=n; b.style.display=n?'grid':'none'; }
+}
 function drag(el){
   let sx=0,dx=0,down=false;
   const start=e=>{down=true;sx=(e.touches?e.touches[0].clientX:e.clientX);el.style.transition="none"};
@@ -530,6 +587,28 @@ function openReelFor(skill){   // from an ad card's "Learn in 1 min" CTA
   document.getElementById('reel').style.display="flex";
 }
 function closeReel(){document.getElementById('reel').style.display="none";}
+
+// --- Saved & applied list ---
+let listTab='applied';
+function openList(){ document.getElementById('listView').style.display='flex'; renderList(); }
+function closeList(){ document.getElementById('listView').style.display='none'; }
+function switchList(t){ listTab=t;
+  document.getElementById('tabApplied').classList.toggle('on',t==='applied');
+  document.getElementById('tabSaved').classList.toggle('on',t==='saved');
+  renderList();
+}
+function renderList(){
+  const rows=document.getElementById('lrows');
+  const data=listTab==='applied'?applied:savedJobs;
+  if(!data.length){ rows.innerHTML=`<div class="lempty">${listTab==='applied'
+    ? "Swipe right (❤️) on a job to start applying — it'll show up here."
+    : "Tap ★ on a job to save it for later."}</div>`; return; }
+  rows.innerHTML=data.map(j=>`<div class="lrow">
+      <div class="av">${j.icon}</div>
+      <div class="info"><h4>${j.role}</h4><p>${j.co} · ${j.pay}</p></div>
+      <div class="pct">🎯 ${matchPct(j)}%</div>
+    </div>`).join("");
+}
 let tt;
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
   clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1400);}
