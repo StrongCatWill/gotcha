@@ -39,7 +39,7 @@
   .stage{flex:1;position:relative;margin:0 14px}
   .card{position:absolute;inset:0;background:var(--card);border-radius:24px;overflow:hidden;
     box-shadow:0 18px 40px rgba(42,60,74,.16);display:flex;flex-direction:column;
-    transition:transform .35s ease,opacity .35s ease;will-change:transform}
+    transition:transform .35s ease,opacity .35s ease;will-change:transform;touch-action:pan-y}
   .banner{height:140px;background:linear-gradient(135deg,var(--brand),var(--brand2));position:relative;
     padding:16px;color:#fff;display:flex;flex-direction:column;justify-content:space-between}
   .src{align-self:flex-start;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:999px;
@@ -537,6 +537,7 @@ function adCard(a){
 }
 function render(){
   renderFilters();
+  dragging=false; activeCard=null;            // reset any drag state each render
   [...stage.querySelectorAll('.card')].forEach(c=>c.remove());
   const jobs=list();
   document.getElementById('empty').style.display = idx>=jobs.length?"flex":"none";
@@ -544,7 +545,7 @@ function render(){
     if(k<0||k>=jobs.length)continue;
     const el=document.createElement('div');el.className="card";el.innerHTML=card(jobs[k]);
     el.style.transform=`scale(${1-(k-idx)*0.04}) translateY(${(k-idx)*10}px)`;
-    el.style.zIndex=100-k; if(k===idx) drag(el); stage.appendChild(el);
+    el.style.zIndex=100-k; if(k===idx) activeCard=el; stage.appendChild(el);
   }
   updateBadge();
 }
@@ -582,19 +583,37 @@ function updateBadge(){
   const b=document.getElementById('listCount'); const n=applied.length+savedJobs.length;
   if(b){ b.textContent=n; b.style.display=n?'grid':'none'; }
 }
-function drag(el){
-  let sx=0,dx=0,down=false;
-  const start=e=>{down=true;sx=(e.touches?e.touches[0].clientX:e.clientX);el.style.transition="none"};
-  const move=e=>{if(!down)return;dx=(e.touches?e.touches[0].clientX:e.clientX)-sx;
-    el.style.transform=`translateX(${dx}px) rotate(${dx/20}deg)`;
-    el.querySelector('.stamp.like').style.opacity=dx>0?Math.min(dx/80,1):0;
-    el.querySelector('.stamp.nope').style.opacity=dx<0?Math.min(-dx/80,1):0;};
-  const end=()=>{if(!down)return;down=false;el.style.transition="transform .35s ease,opacity .35s ease";
-    if(Math.abs(dx)>110)swipe(dx>0?'right':'left');
-    else{el.style.transform="";el.querySelectorAll('.stamp').forEach(s=>s.style.opacity=0)}dx=0;};
-  el.addEventListener('mousedown',start);window.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
-  el.addEventListener('touchstart',start,{passive:true});el.addEventListener('touchmove',move,{passive:true});el.addEventListener('touchend',end);
+// --- single-active-card drag (one set of listeners, no accumulation) ---
+let dragging=false, dsx=0, ddx=0, activeCard=null;
+function dragStart(e){
+  if(!activeCard) return;
+  const onCard=e.target.closest && e.target.closest('.card')===activeCard;
+  if(!onCard) return;                       // ignore taps on buttons / other UI
+  dragging=true; ddx=0; dsx=(e.touches?e.touches[0].clientX:e.clientX);
+  activeCard.style.transition="none";
 }
+function dragMove(e){
+  if(!dragging||!activeCard) return;
+  ddx=(e.touches?e.touches[0].clientX:e.clientX)-dsx;
+  activeCard.style.transform=`translateX(${ddx}px) rotate(${ddx/20}deg)`;
+  const l=activeCard.querySelector('.stamp.like'), n=activeCard.querySelector('.stamp.nope');
+  if(l)l.style.opacity=ddx>0?Math.min(ddx/80,1):0;
+  if(n)n.style.opacity=ddx<0?Math.min(-ddx/80,1):0;
+}
+function dragEnd(){
+  if(!dragging||!activeCard) return;
+  dragging=false; const el=activeCard;
+  el.style.transition="transform .35s ease,opacity .35s ease";
+  if(Math.abs(ddx)>110) swipe(ddx>0?'right':'left');
+  else{ el.style.transform=""; el.querySelectorAll('.stamp').forEach(s=>s.style.opacity=0); }
+  ddx=0;
+}
+window.addEventListener('mousedown',dragStart);
+window.addEventListener('mousemove',dragMove);
+window.addEventListener('mouseup',dragEnd);
+window.addEventListener('touchstart',dragStart,{passive:true});
+window.addEventListener('touchmove',dragMove,{passive:true});
+window.addEventListener('touchend',dragEnd);
 function openReel(){
   // real top skill across the cards viewed so far
   const ranked=Object.entries(seenSkills).sort((a,b)=>b[1]-a[1])[0];
