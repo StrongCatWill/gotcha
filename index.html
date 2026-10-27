@@ -58,6 +58,10 @@
   .prompt{background:#f7f7fc;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px}
   .prompt .q{font-size:12px;color:var(--brand);font-weight:700;margin-bottom:4px}
   .prompt .a{font-size:14px;line-height:1.5}
+  .need{background:#eef4f8;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px}
+  .need .q{font-size:12px;color:var(--brand2);font-weight:700;margin-bottom:6px}
+  .need ul{margin:0;padding-left:18px}
+  .need li{font-size:13.5px;line-height:1.7;color:var(--ink)}
   .stamp{position:absolute;top:26px;font-size:30px;font-weight:900;padding:6px 16px;border:4px solid;
     border-radius:12px;opacity:0;transform:rotate(-14deg);pointer-events:none}
   .stamp.like{left:20px;color:var(--like);border-color:var(--like)}
@@ -313,9 +317,11 @@ function checkOnb(){
   document.getElementById('onbGo').disabled = !(userName && userSkills.length>0);
 }
 async function finishOnb(){
+  endTour();
   document.getElementById('onb').style.display="none";
   await loadJobs();
   render();
+  if(!flag('gotcha_tour_feed')){ setFlag('gotcha_tour_feed'); setTimeout(startTour,400); }
 }
 
 // Fetch the scored feed from the Python backend; fall back to local JOBS (file:// mode).
@@ -351,8 +357,10 @@ function card(j){
     <div class="body">
       <div class="co"><div class="avatar">${j.icon}</div>
         <div><h2>${j.role}</h2><p>${j.co}</p></div></div>
-      <div class="meta"><span>📍 <b>${j.loc}</b></span></div>
+      <div class="meta"><span>📍 <b>${j.loc}</b></span>${j.hours?`<span>🕐 <b>${j.hours}</b></span>`:""}</div>
       <div class="tags">${j.skills.map(s=>`<span class="tag">${s}</span>`).join("")}</div>
+      ${j.requirements&&j.requirements.length?`<div class="need"><div class="q">✅ What they're looking for</div>
+        <ul>${j.requirements.map(r=>`<li>${r}</li>`).join("")}</ul></div>`:""}
       <div class="prompt"><div class="q">${j.q}</div><div class="a">${j.a}</div></div>
     </div>
     <div class="stamp like">LIKE</div><div class="stamp nope">NOPE</div>`;
@@ -410,7 +418,50 @@ function closeReel(){document.getElementById('reel').style.display="none";}
 let tt;
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
   clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1400);}
+// ---- guided tutorial ----
+const TOUR_ONB=[
+  {sel:'#nameInput', t:'Tell us who you are', b:"Your name and whether you're an undergrad or graduate."},
+  {sel:'#cvBox', t:'Upload your CV', b:'Gotcha reads it and auto-detects your skills — no typing needed.'},
+  {sel:'#skillOpts', t:'These power your matches', b:'Skills from your CV get pre-selected here. Add or remove any.'},
+  {sel:'#onbGo', t:'Start swiping', b:'We score every role to your profile and sort the best first.'},
+];
+const TOUR_FEED=[
+  {sel:'.match', t:'Your match score', b:'Every role is ranked to your skills and chosen job types.'},
+  {sel:'.actions', t:'Swipe to decide', b:'♥ apply · ✕ pass · ★ save. You can also drag the card.'},
+  {sel:'.filters', t:'Filter by type', b:'Jump to internships, grad roles, side jobs, remote — anytime.'},
+  {sel:'.help', t:'Replay anytime', b:'Tap ? to run this walkthrough again.'},
+];
+let tourList=[], tourIdx=0;
+function flag(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function setFlag(k){try{localStorage.setItem(k,'1')}catch(e){}}
+function startTour(){
+  const onbVisible=getComputedStyle(document.getElementById('onb')).display!=='none';
+  tourList=onbVisible?TOUR_ONB:TOUR_FEED; tourIdx=0;
+  document.getElementById('tour').style.display='block'; showTour();
+}
+function showTour(){
+  const step=tourList[tourIdx], el=document.querySelector(step.sel);
+  if(!el) return nextTour();
+  const r=el.getBoundingClientRect(), pad=8, spot=document.getElementById('tourSpot');
+  spot.style.left=(r.left-pad)+'px'; spot.style.top=(r.top-pad)+'px';
+  spot.style.width=(r.width+pad*2)+'px'; spot.style.height=(r.height+pad*2)+'px';
+  document.getElementById('tourN').textContent=`Step ${tourIdx+1} of ${tourList.length}`;
+  document.getElementById('tourTitle').textContent=step.t;
+  document.getElementById('tourBody').textContent=step.b;
+  document.getElementById('tourNext').textContent=tourIdx===tourList.length-1?'Done':'Next';
+  const tip=document.getElementById('tourTip'); tip.style.visibility='hidden';
+  requestAnimationFrame(()=>{
+    const th=tip.offsetHeight, tw=tip.offsetWidth, vw=innerWidth, vh=innerHeight;
+    let top=r.bottom+14; if(top+th>vh-10) top=r.top-th-14; if(top<10) top=10;
+    let left=Math.min(Math.max(10,r.left),vw-tw-10);
+    tip.style.top=top+'px'; tip.style.left=left+'px'; tip.style.visibility='visible';
+  });
+}
+function nextTour(){ tourIdx++; if(tourIdx>=tourList.length) return endTour(); showTour(); }
+function endTour(){ document.getElementById('tour').style.display='none'; }
+
 buildOnb();   // start at onboarding; render() runs after prefs are set
+if(!flag('gotcha_tour_onb')){ setFlag('gotcha_tour_onb'); setTimeout(startTour,450); }
 </script>
 </body>
 </html>
