@@ -566,9 +566,17 @@ function swipe(dir){
   setTimeout(()=>{ render(); if(viewed>0 && viewed%5===0) openReel(); },260);
 }
 function save(){
+  const c=topCard(); if(!c)return;
   const job=list()[idx];
-  if(job && !job._ad && !savedJobs.some(s=>s.role===job.role&&s.co===job.co)){ savedJobs.push(job); saved++; }
-  toast("★ Saved"); updateBadge();
+  if(job && !job._ad){
+    if(!savedJobs.some(s=>s.role===job.role&&s.co===job.co)){ savedJobs.push(job); saved++; toast("★ Saved"); }
+    else toast("Already saved");
+  }
+  updateBadge();
+  // advance to the next card so you can keep saving others
+  c.style.transform='translateY(-640px) rotate(-6deg)'; c.style.opacity=0;
+  idx++; viewed++;
+  setTimeout(()=>{ render(); if(viewed>0 && viewed%5===0) openReel(); },260);
 }
 function updateBadge(){
   const b=document.getElementById('listCount'); const n=applied.length+savedJobs.length;
