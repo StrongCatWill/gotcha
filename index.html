@@ -75,6 +75,7 @@
   .adcta{border:none;background:#fff;color:var(--brand2);font-weight:800;font-size:15px;
     padding:13px 24px;border-radius:14px;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.18)}
   .ad.soft .adcta{color:#2f6b57}
+  .adfor{background:rgba(255,255,255,.18);padding:7px 14px;border-radius:999px;font-size:13px;margin-bottom:18px}
   .adswipe{margin-top:16px;font-size:12px;opacity:.8}
   .stamp{position:absolute;top:26px;font-size:30px;font-weight:900;padding:6px 16px;border:4px solid;
     border-radius:12px;opacity:0;transform:rotate(-14deg);pointer-events:none}
@@ -219,6 +220,8 @@
       <h3>👋 Your details</h3>
       <input id="nameInput" placeholder="Your name" oninput="checkOnb()" />
       <div style="height:10px"></div>
+      <input id="linkInput" placeholder="🔗 GitHub / portfolio link (optional)" />
+      <div style="height:10px"></div>
       <div class="opts" id="statusOpts"></div>
     </div>
     <div class="group">
@@ -303,7 +306,7 @@ const FILTERS = ["All","Internship","Graduate","Student job","Side job","Remote"
 let active="All", idx=0, viewed=0, saved=0;
 let FEED=JOBS;                              // replaced by backend feed after onboarding
 let userSkills=[], userTypes=[];           // onboarding prefs
-let userName="", userStatus="", userVibes=[];   // profile + personality
+let userName="", userStatus="", userLink="", userVibes=[];   // profile + personality
 const VIBE_PAIRS=[                               // either/or personality check
   [{t:"🚀 Ship fast",v:"fast"},{t:"🧱 Steady & structured",v:"structured"}],
   [{t:"💬 People-facing",v:"people"},{t:"🎧 Heads-down",v:"solo"}],
@@ -376,6 +379,7 @@ function checkOnb(){
 }
 async function finishOnb(){
   endTour();
+  userLink=document.getElementById('linkInput').value.trim();
   document.getElementById('onb').style.display="none";
   await loadJobs();
   render();
@@ -393,18 +397,32 @@ async function loadJobs(){
   FEED=withAds(JOBS);
 }
 
-// Native-ad skill cards slipped between jobs (every 3rd slot).
-const SKILL_ADS=[
-  {skill:"SQL",          kind:"Hard", icon:"🗄️", blurb:"Query data like a pro — the #1 ask in grad data roles."},
-  {skill:"Communication",kind:"Soft", icon:"🗣️", blurb:"Explain your work clearly — recruiters rank it top 3."},
-  {skill:"React",        kind:"Hard", icon:"⚛️", blurb:"Build interfaces fast — all over your frontend matches."},
-  {skill:"Teamwork",     kind:"Soft", icon:"🤝", blurb:"Ship together — nearly every employer card mentions it."},
-  {skill:"Python",       kind:"Hard", icon:"🐍", blurb:"Automate & analyse — opens data and research roles."},
-];
+// --- Skill-gap course cards slipped between jobs (every 3rd slot) ---
+const SOFT_SKILLS=["Teaching","Customer care","Communication","Teamwork","Content"];
+const SKILL_ICON={React:"⚛️",TypeScript:"🧩",Python:"🐍",Pandas:"🐼",SQL:"🗄️",PostgreSQL:"🗄️",
+  Figma:"🎨",UI:"🖼️",Prototyping:"✏️",Java:"☕",Ruby:"💎",Analytics:"📊",SEO:"🔎",CSS:"🎨",
+  Teaching:"📚",Teamwork:"🤝","Customer care":"💬",Content:"✍️",Communication:"🗣️"};
+const skillKind=s=>SOFT_SKILLS.includes(s)?"Soft":"Hard";
+const skillIcon=s=>SKILL_ICON[s]||"🎓";
+
+// Pick a skill the user lacks but matched jobs ask for → recommend a course.
 function withAds(jobs){
-  const out=[]; let a=0;
+  const out=[]; const have=new Set(userSkills); const used=new Set();
   jobs.forEach((j,i)=>{ out.push(j);
-    if((i+1)%3===0){ out.push({_ad:true, ...SKILL_ADS[a%SKILL_ADS.length]}); a++; }
+    if((i+1)%3!==0) return;
+    const window=jobs.slice(Math.max(0,i-2),i+1);   // the jobs just shown
+    let gap=null, role=null;
+    for(const pj of window){ if(pj._ad)continue;
+      for(const s of (pj.skills||[])){ if(!have.has(s)&&!used.has(s)){ gap=s; role=pj.role; break; } }
+      if(gap)break; }
+    if(!gap){                                        // user already has the skills — upskill anyway
+      for(const pj of window){ if(pj._ad)continue;
+        for(const s of (pj.skills||[])){ if(!used.has(s)){ gap=s; role=pj.role; break; } } if(gap)break; }
+    }
+    if(!gap) return;
+    used.add(gap);
+    out.push({_ad:true, skill:gap, kind:skillKind(gap), icon:skillIcon(gap), forRole:role,
+      gapped:!have.has(gap)});
   });
   return out;
 }
@@ -441,13 +459,19 @@ function card(j){
     <div class="stamp like">LIKE</div><div class="stamp nope">NOPE</div>`;
 }
 function adCard(a){
+  const blurb = a.gapped
+    ? `You don't have <b>${a.skill}</b> yet — a short course gets you qualified.`
+    : `Level up your <b>${a.skill}</b> to stand out even more.`;
+  const forLine = a.forRole
+    ? `<div class="adfor">🎯 Needed for roles like <b>${a.forRole}</b></div>` : "";
   return `<div class="ad ${a.kind==='Hard'?'hard':'soft'}">
-      <div class="adlabel">✨ Sponsored · grow your match</div>
+      <div class="adlabel">🎓 Recommended course · close your skill gap</div>
       <div class="adicon">${a.icon}</div>
       <div class="adkind">${a.kind} skill</div>
       <h2 class="adskill">${a.skill}</h2>
-      <p class="adblurb">${a.blurb}</p>
-      <button class="adcta" onclick="event.stopPropagation();openReelFor('${a.skill}')">▶ Learn in 1 min</button>
+      <p class="adblurb">${blurb}</p>
+      ${forLine}
+      <button class="adcta" onclick="event.stopPropagation();openReelFor('${a.skill}')">▶ Start 1-min intro</button>
       <div class="adswipe">swipe to skip →</div>
     </div>
     <div class="stamp like">LEARN</div><div class="stamp nope">SKIP</div>`;
